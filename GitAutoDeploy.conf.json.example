@@ -5,6 +5,7 @@
 		"echo Starting deploy!",
 		"echo Ending deploy!"
 	],
+    "global_path": "/tmp/",
 	"repositories":
 	[{
 		"url": "https://github.com/logsol/Test-Repo",
