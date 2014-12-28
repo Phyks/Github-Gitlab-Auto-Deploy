@@ -28,6 +28,8 @@ class GitAutoDeploy(BaseHTTPRequestHandler):
                 print "%s file is not valid JSON" % myClass.CONFIG_FILEPATH
                 sys.exit(2)
 
+            if myClass.config['repositories'] is None:
+                return myClass.config
             for repository in myClass.config['repositories']:
                 if(not os.path.isdir(repository['path'])):
                     print "Directory %s not found" % repository['path']
@@ -79,7 +81,7 @@ class GitAutoDeploy(BaseHTTPRequestHandler):
 
             if mode == "github":
                 response = json.loads(body)
-                items.append(response['repository']['url'])
+                items.append(response['repository']['homepage']+'.git')
 
             elif mode == "bitbucket":
                 for itemString in post['payload']:
@@ -90,7 +92,7 @@ class GitAutoDeploy(BaseHTTPRequestHandler):
             elif mode == "gitlab":
                 for itemString in post['payload']:
                     item = json.loads(itemString)
-                    items.append(item['repository']['url'])
+                    items.append(item['repository']['homepage']+'.git')
 
             # WTF?!
             else:
@@ -104,7 +106,19 @@ class GitAutoDeploy(BaseHTTPRequestHandler):
         res = []
         config = self.getConfig()
         if config['repositories'] is None:
-            return [config['global_path'] +'/'+ repoUrl.split("/")[-1]]
+            path = config['global_path'].strip("/") +'/'+ (repoUrl.split("/")[-1])
+            if(not os.path.isdir(path)):
+                print "Directory %s not found" % path
+                call(['git clone '+repoUrl+' '+path], shell=True)
+            if(not os.path.isdir(path)):
+                print "Unable to clone repository %s" % repoUrl
+                sys.exit(2)
+            else:
+                print "Repository %s successfully cloned" % repoUrl
+                if(not os.path.isdir(path + '/.git')):
+                    print "Directory %s is not a Git repository" % path
+                    sys.exit(2)
+            return [path]
         for repository in config['repositories']:
             if(repository['url'] == repoUrl):
                 res.append(repository['path'])
@@ -140,7 +154,8 @@ class GitAutoDeploy(BaseHTTPRequestHandler):
         config = self.getConfig()
         if config['repositories'] is None:
             really_deploy(path, config)
-        for repository in config['repositories']:  # TODO
+            return
+        for repository in config['repositories']:
             if(repository['path'] == path):
                 really_deploy(path, config, repository)
                 break
